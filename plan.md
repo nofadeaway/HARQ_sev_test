@@ -1,0 +1,2 @@
+7.11
+把pid的选择都写到 trans_control里面， 给每个HARQ进程加上一个等待状态busy_flag;

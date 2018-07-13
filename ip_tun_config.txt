@@ -1,0 +1,28 @@
+ifconfig enp3s0 192.168.3.254 netmask 255.255.255.0  //此为笔记本的无线网卡，有线为 wlp2s0？？，设置物理网卡的ip  //enp0s31f6 
+
+openvpn --mktun --dev tun3
+
+ip link set tun3 up
+
+ip addr add 192.168.0.2/24 dev tun3
+
+ping 192.168.0.1    //要ping个tun3同一个网段的ip
+/*******************************
+it-udp int port = atoi("4404");//端口，一方发一方收要一致
+
+//匹配目的ip，基站端的ip-lte-pkt.cc多了这一部分
+		//if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==1)){
+		
+			rlc3.write_sdu(&sdu_bufs[k]);
+		//}//else if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==2))
+
+*******************************/
+
+
+对照 word文档里的图，tun0和tun0在同一个网段，下方的 eth1之间互为目的地址， eth1的地址和tun0的地址无关系
+7.2
+目前把我的笔记本当用户，设置为基站地址为 192.168.3.4；UE计算机为192.168.3.1
+
+UE程序发送的目的地址为 192.168.3.4
+
+enb ip 105   UE 106
