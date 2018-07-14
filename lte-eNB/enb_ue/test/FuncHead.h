@@ -57,8 +57,8 @@ int cwrite(int, uint8_t *, int);
 int tun_alloc(char *, int);
 
 //uint8_t* trans_control(uint32_t pid_now);   //FX：选择哪一个HARQ进程用于UDP发送
-uint8_t* trans_control(uint32_t pid_now,uint32_t len,int port_add);
-void* pdu_store(uint32_t pid_now,uint8_t* payload_back,uint32_t pdu_sz_test);
+//uint8_t* trans_control(uint32_t pid_now,uint32_t len,int port_add);
+//void* pdu_store(uint32_t pid_now,uint8_t* payload_back,uint32_t pdu_sz_test);
 
 struct D_DCI
 {

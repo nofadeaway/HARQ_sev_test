@@ -1,5 +1,5 @@
 #######主测试######
-OBJS = lte-ue-main.o lte-ip-pkt.o ip-harq-entity.o lte-udp.o lte-rece.o lte-tun.o mux.o demux.o pdu.o pdu_queue.o rlc_um.o  buffer_pool.o log_stdout.o qbuff.o vector.o bit.o proc_phr.o proc_bsr.o phy_common.o sequence.o 
+OBJS = lte-ue-main.o lte-ip-pkt.o  lte-udp.o lte-rece.o lte-tun.o mux.o demux.o pdu.o pdu_queue.o rlc_um.o  buffer_pool.o log_stdout.o qbuff.o vector.o bit.o proc_phr.o proc_bsr.o phy_common.o sequence.o 
      
 DEST = main
 LIBS = -lm -lpthread -lboost_system -lboost_filesystem -lboost_thread -lboost_date_time 

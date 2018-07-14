@@ -5,12 +5,15 @@
 using namespace srslte;
 using namespace srsue;
 
-extern demux mac_demux_test;
+//extern demux mac_demux_test;
 extern mac_dummy_timers timers_test;
 //extern bool ACK[8];
-extern bool ACK[];
+//extern bool ACK[];
 
-extern eNB_ACK I_ACK[];
+//extern eNB_ACK I_ACK[];
+
+//extern UE_process_FX fx_mac_test;
+extern UE_FX ue_test;    //map容器
 
 // struct A_ACK
 // {
@@ -37,7 +40,8 @@ void *lte_rece(void *ptr)
 	{
 		printf("Recv:No port offset inport.\n");
 	}
-
+    
+	uint16_t rnti = port_add;
 	//printf("enter--lte_rece\n");
 
 	int st = socket(AF_INET, SOCK_DGRAM, 0);
@@ -132,11 +136,11 @@ void *lte_rece(void *ptr)
 			{
 				printf("RECE:Lock failed!\n");
 			}
-			ACK[ack_reply.ACK_pid] = ack_reply.ack_0;
+			ue_test.UE[rnti].ACK[ack_reply.ACK_pid] = ack_reply.ack_0;
 			pthread_mutex_unlock(&ACK_LOCK);
 			char str1[10] = "true", str2[10] = "false";
 			printf("/******lte-Recv:");
-			printf("Thread_RECV No.%d: No.%d ACK received is %s\n",port_add, ack_reply.ACK_pid, (ack_reply.ack_0) ? str1 : str2);
+			printf("RNTI:%d::: No.%d ACK received is %s\n",rnti, ack_reply.ACK_pid, (ack_reply.ack_0) ? str1 : str2);
 			// if(ack_reply.ack_0==true)
 			// {
 			// 	ACK[0]=ack_reply.ack_0;

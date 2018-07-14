@@ -10,11 +10,14 @@ using namespace srsue;
 // 	uint32_t N_pid_now;
 // };    //结构体永远别忘了加分号...
 
-extern mux ue_mux_test;
-extern srslte::pdu_queue pdu_queue_test; //5.28
+// extern mux ue_mux_test;
+// extern srslte::pdu_queue pdu_queue_test; //5.28
 //bool ACK[8]={false,false,false,false,false,false,false,false};
 
 extern pthread_barrier_t barrier;
+
+//extern UE_process_FX fx_mac_test;
+extern UE_FX ue_test;    //map容器
 
 void *lte_send_udp(void *ptr)
 {
@@ -29,6 +32,7 @@ void *lte_send_udp(void *ptr)
 	{
 		printf("UDP:No port offset inport.\n");
 	}
+	uint16_t rnti = port_add;
 
 	//printf("enter--lte_send_udp\n");
 	usleep(5000);
@@ -89,8 +93,8 @@ void *lte_send_udp(void *ptr)
 
 		//uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32_t pid)
 
-		payload_back = ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
-		pdu_store(pid_now, payload_back, pdu_sz_test);
+		payload_back = ue_test.UE[rnti].ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
+		ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
 		// printf("Now this pdu belongs to HARQ NO.%d\n",pid_now);
 
 		// //begin{5.28添加}
@@ -146,7 +150,7 @@ void *lte_send_udp(void *ptr)
 		//添加一个轮询pid_now,如果当前这个pid_now的ACK正在被rece修改，则去取下一个
 
 		//
-		payload_tosend = trans_control(pid_now, pdu_sz_test, port_add);
+		payload_tosend = ue_test.UE[rnti].trans_control(pid_now, pdu_sz_test, port_add);
 		if (sendto(st, payload_tosend, pdu_sz_test, 0, (struct sockaddr *)&addr,
 				   sizeof(addr)) == -1)
 		{

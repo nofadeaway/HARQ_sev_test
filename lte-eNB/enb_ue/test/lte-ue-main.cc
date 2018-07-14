@@ -1,4 +1,5 @@
 #include "FuncHead.h"
+#include "FX_MAC.h"
 
 using namespace srslte;
 using namespace srsue;
@@ -7,16 +8,19 @@ pthread_t id[50]; //预留100可以创建个线程
 
 rlc_um rlc3;
 mac_dummy_timers timers_test;
-mux ue_mux_test;
-demux mac_demux_test;
-demux mac_demux_test_trans;		  //用于发送方的，其中自动会有pdu_queue
-srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8，既最多缓存8个PDU
+//mux ue_mux_test;
+//demux mac_demux_test;
+demux mac_demux_test_trans;		  //用于发送方的,其中自动会有pdu_queue
+//srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8,既最多缓存8个PDU
 bool ACK[8] = {false, false, false, false, false, false, false, false};
-eNB_ACK I_ACK[4];
+//eNB_ACK I_ACK[4];
+
+//UE_process_FX fx_mac_test;
+UE_FX ue_test;    //map容器
 
 int tun_fd; // option;全局变量--rlc写入ip时用
 
-pthread_barrier_t barrier; //屏障，用于一开始线程初始化
+pthread_barrier_t barrier; //屏障,用于一开始线程初始化
 
 /**************************************************************************
 * rlc-class
@@ -121,7 +125,7 @@ class rlc_mac_tester
 // {
 // 	if (id[0] != 0)
 // 	{
-// 		pthread_join(id[0], NULL); //等待线程结束，使用此函数对创建的线程资源回收
+// 		pthread_join(id[0], NULL); //等待线程结束,使用此函数对创建的线程资源回收
 // 		printf("Thread1 lte_send_ip_3 completed!\n");
 // 	}
 // 	if (id[1] != 0)
@@ -184,7 +188,7 @@ void thread_wait(unsigned int now, int user_n)
 	{
 		if (id[i] != 0)
 		{
-			pthread_join(id[i], NULL); //等待线程结束，使用此函数对创建的线程资源回收
+			pthread_join(id[i], NULL); //等待线程结束,使用此函数对创建的线程资源回收
 			if (i < 1)
 			{
 				printf("Thread1 lte_send_ip_3 completed!\n");
@@ -246,52 +250,73 @@ int main(void)
 	/***********************************************
 	* MAC-MUX
 	*************************************************/
-	srslte::log_stdout log2("UE_MUX");
-	log2.set_level(srslte::LOG_LEVEL_DEBUG);
-	log2.set_hex_limit(-1);
+	// srslte::log_stdout log2("UE_MUX");
+	// log2.set_level(srslte::LOG_LEVEL_DEBUG);
+	// log2.set_hex_limit(-1);
 
+	// rlc_mac_tester rlc_test;
+	// bsr_proc bsr_test;
+	// phr_proc phr_test;
+
+	// log2.set_level(srslte::LOG_LEVEL_DEBUG); //
+
+	// ue_mux_test.init(&rlc_test, &log2, &bsr_test, &phr_test);
+
+	// /***********************************************
+	// * MAC-PDU-Queue 将MAC的PDU存入缓冲队列    控制重发先写在lte-udp.cc里
+	// *************************************************/
+	// srslte::log_stdout log4("EnB_Queue");
+	// log4.set_level(srslte::LOG_LEVEL_DEBUG);
+	// log4.set_hex_limit(-1);
+
+	// log4.set_level(srslte::LOG_LEVEL_DEBUG); //
+
+	// pdu_queue::process_callback *callback_test; //
+	// callback_test = &mac_demux_test_trans;		// 5.23
+
+	// pdu_queue_test.init(callback_test, &log4); //存入PDU的操作写在lte-udp.cc里面
+	// 										   /***********************************************
+	// * ACK发送与接受,目前基站端接受,UE发送
+	// *************************************************/
+
+	// /***********************************************
+	// * MAC-DEMUX
+	// *************************************************/
+	// srslte::log_stdout log1("UE_DEMUX");
+	// log1.set_level(srslte::LOG_LEVEL_DEBUG);
+	// log1.set_hex_limit(-1);
+
+	// phy_interface_mac phy_interface_mac_test; //物理层与mac接口--/ue/hdr/phy_interface
+	// //srslte::timers timers_test;//这是啥---屏蔽掉了,在MAC CE处理出有用
+	// log1.set_level(srslte::LOG_LEVEL_DEBUG);
+
+	// mac_demux_test.init(&phy_interface_mac_test, &rlc_test, &log1); //,&timers_test);
+     
+    srslte::log_stdout log5("FX_MAC");
+	log5.set_level(srslte::LOG_LEVEL_DEBUG);
+	log5.set_hex_limit(-1);
+	phy_interface_mac phy_interface_mac_test;
 	rlc_mac_tester rlc_test;
 	bsr_proc bsr_test;
 	phr_proc phr_test;
-
-	log2.set_level(srslte::LOG_LEVEL_DEBUG); //
-
-	ue_mux_test.init(&rlc_test, &log2, &bsr_test, &phr_test);
-
-	/***********************************************
-	* MAC-PDU-Queue 将MAC的PDU存入缓冲队列    控制重发先写在lte-udp.cc里
-	*************************************************/
-	srslte::log_stdout log4("EnB_Queue");
-	log4.set_level(srslte::LOG_LEVEL_DEBUG);
-	log4.set_hex_limit(-1);
-
-	log4.set_level(srslte::LOG_LEVEL_DEBUG); //
-
-	pdu_queue::process_callback *callback_test; //
+    pdu_queue::process_callback *callback_test; //
 	callback_test = &mac_demux_test_trans;		// 5.23
+    
+    
+	int user_n = 1, err = -1;								  //用户数目
+	unsigned int count_barrier = user_n * 2 + 1, pth_now = 0; //用户数为n,n个udp,n个recv,1个ip-pkt,1个main,NONONO,主线程不需要等待
+    UE_process_FX ue_temp;
+	for (int i = 0; i <user_n; ++i)
+	{
+          ue_test.UE.insert(std::make_pair(i,ue_temp));
+		  ue_test.UE[i].rnti = i;
+		  ue_test.UE[i].init(&phy_interface_mac_test,&rlc_test,&log5,&bsr_test, &phr_test,callback_test);
+	}
 
-	pdu_queue_test.init(callback_test, &log4); //存入PDU的操作写在lte-udp.cc里面
-											   /***********************************************
-	* ACK发送与接受，目前基站端接受，UE发送
-	*************************************************/
-
-	/***********************************************
-	* MAC-DEMUX
-	*************************************************/
-	srslte::log_stdout log1("UE_DEMUX");
-	log1.set_level(srslte::LOG_LEVEL_DEBUG);
-	log1.set_hex_limit(-1);
-
-	phy_interface_mac phy_interface_mac_test; //物理层与mac接口--/ue/hdr/phy_interface
-	//srslte::timers timers_test;//这是啥---屏蔽掉了,在MAC CE处理出有用
-	log1.set_level(srslte::LOG_LEVEL_DEBUG);
-
-	mac_demux_test.init(&phy_interface_mac_test, &rlc_test, &log1); //,&timers_test);
 
 	//线程创建
 
-	int user_n = 4, err = -1;								  //用户数目
-	unsigned int count_barrier = user_n * 2 + 1, pth_now = 0; //用户数为n，n个udp，n个recv，1个ip-pkt，1个main，NONONO，主线程不需要等待
+	
 	err = pthread_barrier_init(&barrier, NULL, count_barrier);
 	if (err == 0)
 		printf("Barrier init succeed!\n");

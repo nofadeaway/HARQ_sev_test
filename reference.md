@@ -105,3 +105,5 @@ send()函数只能用于连接已经建立的情况，未建立连接时用sendt
 7.11
     phch_worker.cc: phy->mac->tb_decoded(dl_ack, dl_mac_grant.rnti_type, dl_mac_grant.pid);
     其中 phy 为 class phch_worker 中phch_common    *phy;
+
+7.14 发现mux，demux是通过main中的 rlc_mac_tester 连接的，都是指定了用rlc3的数据
