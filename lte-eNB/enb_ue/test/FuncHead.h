@@ -62,13 +62,13 @@ int tun_alloc(char *, int);
 
 struct D_DCI
 {
-	uint32_t N_pid_now;
+	uint32_t N_pid_now = 0;
 };    //结构体永远别忘了加分号...
 
 struct A_ACK
 {
-	uint32_t ACK_pid;
-	bool ack_0;
+	uint32_t ACK_pid = 0;
+	bool ack_0 = 0;
 };
 
 struct eNB_ACK 

@@ -32,7 +32,7 @@ void mux::init(rlc_interface_mac *rlc_, srslte::log *log_h_, bsr_proc *bsr_proce
   rlc        = rlc_;
   bsr_procedure = bsr_procedure_;
   phr_procedure = phr_procedure_;
-  printf("Mux process succeeds!\n");
+  //printf("Mux process succeeds!\n");
 }
 
 void mux::reset()
@@ -138,15 +138,16 @@ uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32
 
   // MAC control element for C-RNTI or data from UL-CCCH-----但是现在我们不接收来自CCCH的数据
   //if (!allocate_sdu(0, &pdu_msg, -1, NULL)) {
-    if (pending_crnti_ce) {
-      if (pdu_msg.new_subh()) {
-        if (!pdu_msg.get()->set_c_rnti(pending_crnti_ce)) {
-          Warning("Pending C-RNTI CE could not be inserted in MAC PDU\n");
-        }
-      }
-    }
-  //} 
-  pending_crnti_ce = 0; 
+  //   printf("pending_crnti_ce is %d",pending_crnti_ce);
+  //   if (pending_crnti_ce) {
+  //     if (pdu_msg.new_subh()) {
+  //       if (!pdu_msg.get()->set_c_rnti(pending_crnti_ce)) {
+  //         Warning("Pending C-RNTI CE could not be inserted in MAC PDU\n");
+  //       }
+  //     }
+  //   }
+  // //} 
+  // pending_crnti_ce = 0; 
   /* 
   bsr_proc::bsr_t bsr; 
   //修改bool regular_bsr = bsr_procedure->need_to_send_bsr_on_ul_grant(pdu_msg.rem_size(), &bsr);printf("HERE32\n");
@@ -222,7 +223,7 @@ void mux::append_crnti_ce_next_tx(uint16_t crnti) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool mux::allocate_sdu(uint32_t lcid, srslte::sch_pdu* pdu_msg, int max_sdu_sz, uint32_t* sdu_sz) 
+bool mux::allocate_sdu(uint32_t lcid, srslte::sch_pdu* pdu_msg, int max_sdu_sz, uint32_t* sdu_sz)  //从rlc拉取数据
 { 
  
   // Get n-th pending SDU pointer and length
@@ -246,7 +247,7 @@ bool mux::allocate_sdu(uint32_t lcid, srslte::sch_pdu* pdu_msg, int max_sdu_sz, 
 
 //printf("\nrequst_mac_sdu_len = %d\n\n",sdu_len);
 
-        sdu_len = pdu_msg->get()->set_sdu(lcid, sdu_len, rlc);////////////////////////SET SDU pdu.cc-567
+        sdu_len = pdu_msg->get()->set_sdu(lcid, sdu_len, rlc);////////////////////////SET SDU pdu.cc-541
 
 //printf("\nfinal_mac_sdu_len = %d\n\n",sdu_len);//
 

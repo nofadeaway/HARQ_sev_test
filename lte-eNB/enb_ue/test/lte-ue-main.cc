@@ -7,19 +7,20 @@ using namespace srsue;
 pthread_t id[50]; //预留100可以创建个线程
 
 rlc_um rlc3;
+rlc_um rlc_test[4];
 mac_dummy_timers timers_test;
 //mux ue_mux_test;
 //demux mac_demux_test;
-demux mac_demux_test_trans;		  //用于发送方的,其中自动会有pdu_queue
+demux mac_demux_test_trans; //用于发送方的,其中自动会有pdu_queue
 //srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8,既最多缓存8个PDU
-bool ACK[8] = {false, false, false, false, false, false, false, false};
+//bool ACK[8] = {false, false, false, false, false, false, false, false};
 //eNB_ACK I_ACK[4];
 
 //UE_process_FX fx_mac_test;
-UE_FX ue_test;    //map容器
+UE_FX ue_test; //map容器
 
 int tun_fd; // option;全局变量--rlc写入ip时用
-
+pthread_mutex_t pdu_gets = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier; //屏障,用于一开始线程初始化
 
 /**************************************************************************
@@ -27,10 +28,10 @@ pthread_barrier_t barrier; //屏障,用于一开始线程初始化
 **************************************************************************/
 
 class rlc_um_tester_3
-	: public pdcp_interface_rlc,
-	  public rrc_interface_rlc
+	:public pdcp_interface_rlc
+	, public rrc_interface_rlc
 {
-  public:
+public:
 	rlc_um_tester_3() { n_sdus = 0; }
 
 	// PDCP interface
@@ -47,37 +48,35 @@ class rlc_um_tester_3
 	int n_sdus;
 };
 
+
 /////////////////
 class rlc_mac_tester
-	: public rlc_interface_mac
+	:public rlc_interface_mac  
 {
-  public:
-	uint32_t get_buffer_state(uint32_t lcid)
-	{
-		if (lcid == 3)
-		{
-			return rlc3.get_buffer_state();
-		}
-		//else{//lcid==4以及其他
-		//	return rlc4.get_buffer_state();
-		//}
+public:
+  	 uint32_t get_buffer_state(uint32_t lcid)
+	{if(lcid==3){
+		return rlc3.get_buffer_state();
+	}
+	//else{//lcid==4以及其他
+	//	return rlc4.get_buffer_state();
+	//}	
 	}
 
-	uint32_t get_total_buffer_state(uint32_t lcid) {}
+   uint32_t get_total_buffer_state(uint32_t lcid) {}
 
-	const static int MAX_PDU_SEGMENTS = 20;
+   const static int MAX_PDU_SEGMENTS = 20;
 
-	/* MAC calls RLC to get RLC segment of nof_bytes length.
+  /* MAC calls RLC to get RLC segment of nof_bytes length.
    * Segmentation happens in this function. RLC PDU is stored in payload. */
-	int read_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
+   	int read_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
 	{
 		int len;
-		if (lcid == 3)
-		{
-			len = rlc3.read_pdu(payload, nof_bytes);
+		if(lcid==3){
+			len=rlc3.read_pdu(payload,nof_bytes);
 		}
 		//else{//lcid==4以及其他
-		//len=rlc4.read_pdu(payload,nof_bytes);printf("HERE4444\n");
+			//len=rlc4.read_pdu(payload,nof_bytes);printf("HERE4444\n");
 		//}
 		return len;
 	}
@@ -86,13 +85,12 @@ class rlc_mac_tester
 	* PDU gets placed into the buffer and higher layer thread gets notified. */
 	void write_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
 	{
-		if (lcid == 3)
-		{
+		if (lcid == 3) {
 
-			rlc3.write_pdu(payload, nof_bytes);
-		} //else{//lcid==4以及其他
-		  //rlc4.write_pdu(payload,nof_bytes);printf("HERE4444\n");
-		  //}
+			rlc3.write_pdu(payload, nof_bytes); 
+		}//else{//lcid==4以及其他
+		 //rlc4.write_pdu(payload,nof_bytes);printf("HERE4444\n");
+		 //}	
 	}
 };
 
@@ -144,7 +142,7 @@ int thread_create(int user_n)
 {
 
 	int temp, temp_in[200];
-	unsigned int c_p_now = 0; //记录目前已经创建的线程数目
+	int c_p_now = 0; //记录目前已经创建的线程数目
 	memset(&id, 0, sizeof(id));
 
 	if ((temp = pthread_create(&id[0], NULL, lte_send_ip_3, NULL) != 0)) //ip-pkt
@@ -155,7 +153,7 @@ int thread_create(int user_n)
 		++c_p_now;
 		printf("Thread 1 lte_send_ip_3 created! Now number of pthreads are %d!\n", c_p_now);
 	}
-
+	//printf("!!!");
 	for (int i = 0; i < user_n; ++i)
 	{
 		temp_in[c_p_now] = i;
@@ -167,7 +165,7 @@ int thread_create(int user_n)
 			printf("Dest:UE No.%d:Thread 2 lte_send_udp created! Now number of pthreads are %d!\n", i, c_p_now);
 		}
 	}
-
+	//printf("666");
 	for (int i = 0; i < user_n; ++i)
 	{
 		temp_in[c_p_now] = i;
@@ -229,15 +227,15 @@ int main(void)
 	* rlc-um-1-lcid-3
 	***********************************************/
 	srslte::log_stdout log3("RLC_UM_3");
-
+	
 	log3.set_level(srslte::LOG_LEVEL_DEBUG);
-
+	
 	log3.set_hex_limit(-1);
-
-	rlc_um_tester_3 tester_3;
-	//mac_dummy_timers timers;
-
-	rlc3.init(&log3, 3, &tester_3, &tester_3, &timers_test); //LCID=3!!!!!!
+	
+	rlc_um_tester_3    tester_3;
+	//mac_dummy_timers timers; 
+ 
+	rlc3.init(&log3, 3, &tester_3, &tester_3, &timers_test);//LCID=3!!!!!!
 
 	LIBLTE_RRC_RLC_CONFIG_STRUCT cnfg;
 	cnfg.rlc_mode = LIBLTE_RRC_RLC_MODE_UM_BI;
@@ -291,32 +289,30 @@ int main(void)
 	// log1.set_level(srslte::LOG_LEVEL_DEBUG);
 
 	// mac_demux_test.init(&phy_interface_mac_test, &rlc_test, &log1); //,&timers_test);
-     
-    srslte::log_stdout log5("FX_MAC");
+
+	srslte::log_stdout log5("FX_MAC");
 	log5.set_level(srslte::LOG_LEVEL_DEBUG);
 	log5.set_hex_limit(-1);
 	phy_interface_mac phy_interface_mac_test;
 	rlc_mac_tester rlc_test;
 	bsr_proc bsr_test;
 	phr_proc phr_test;
-    pdu_queue::process_callback *callback_test; //
+	pdu_queue::process_callback *callback_test; //
 	callback_test = &mac_demux_test_trans;		// 5.23
-    
-    
-	int user_n = 1, err = -1;								  //用户数目
-	unsigned int count_barrier = user_n * 2 + 1, pth_now = 0; //用户数为n,n个udp,n个recv,1个ip-pkt,1个main,NONONO,主线程不需要等待
-    UE_process_FX ue_temp;
-	for (int i = 0; i <user_n; ++i)
-	{
-          ue_test.UE.insert(std::make_pair(i,ue_temp));
-		  ue_test.UE[i].rnti = i;
-		  ue_test.UE[i].init(&phy_interface_mac_test,&rlc_test,&log5,&bsr_test, &phr_test,callback_test);
-	}
 
+	uint16_t user_n = 4;
+	int err = -1;											  //用户数目
+	unsigned int count_barrier = user_n * 2 + 1, pth_now = 0; //用户数为n,n个udp,n个recv,1个ip-pkt,1个main,NONONO,主线程不需要等待
+	UE_process_FX ue_temp;
+	for (uint16_t i = 0; i < user_n; ++i)
+	{
+		//ue_test.UE.insert(std::make_pair(i,ue_temp));
+		ue_test.UE[i].rnti = i;
+		ue_test.UE[i].init(&phy_interface_mac_test, &rlc_test, &log5, &bsr_test, &phr_test, callback_test);
+	}
 
 	//线程创建
 
-	
 	err = pthread_barrier_init(&barrier, NULL, count_barrier);
 	if (err == 0)
 		printf("Barrier init succeed!\n");

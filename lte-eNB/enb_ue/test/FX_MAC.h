@@ -114,7 +114,7 @@ public:
     }
   }
 
-  uint8_t *trans_control(uint32_t pid_now, uint32_t len, int port_add)
+  uint8_t *trans_control(uint32_t pid_now, uint32_t len)
   {
     int retrans_limit = 3;
     static int retrans_times[8] = {0};
@@ -131,6 +131,11 @@ public:
     pthread_mutex_lock(&ACK_LOCK);
     bool ACK_temp = ACK[pid_now];
     pthread_mutex_unlock(&ACK_LOCK);
+    // if(pdu_queue_test.pdu_q[pid_now].isempty())         //不需要，pop函数里面，若队列空，会返回NUll
+    // {
+    //   printf("RNTI %d::: No PDU in queue!\n",rnti);
+    //   return NULL;
+    // }
     if (ACK_temp)
     {
       //payload_tosend = payload_back;
@@ -149,7 +154,7 @@ public:
         //uint32_t len=pdu_sz_test;
         //payload_tosend =(uint8_t*) pdu_queue_test.pdu_q[pid_now].pop(&len);   //暂时是前7个进程一直ACK为true，第8个ACK一直为false
         printf("RNTI:%d::: Now PID NO.%d:the retransmission size is %d bytes.\n", rnti, pid_now, len);
-        printf("RNTI:%d::: Now PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is() + 1);
+        printf("RNTI:%d::: Now retransmission of PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is() + 1);
 
         return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len);
       }

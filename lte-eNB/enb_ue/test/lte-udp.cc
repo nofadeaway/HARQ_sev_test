@@ -15,9 +15,10 @@ using namespace srsue;
 //bool ACK[8]={false,false,false,false,false,false,false,false};
 
 extern pthread_barrier_t barrier;
+extern pthread_mutex_t pdu_gets;
 
 //extern UE_process_FX fx_mac_test;
-extern UE_FX ue_test;    //map容器
+extern UE_FX ue_test; //map容器
 
 void *lte_send_udp(void *ptr)
 {
@@ -80,8 +81,10 @@ void *lte_send_udp(void *ptr)
 	addr_a.sin_family = AF_INET;
 	addr_a.sin_port = htons(port_a);
 	addr_a.sin_addr.s_addr = inet_addr("10.129.4.106"); //目的实际地址
-														//7.3end{发送DCI}
-														//sleep(1);
+	//7.3end{发送DCI}
+	//sleep(1);
+	char temp_DCI[100];
+	D_DCI DCI_0;
 	pthread_barrier_wait(&barrier);
 
 	while (1)
@@ -92,8 +95,10 @@ void *lte_send_udp(void *ptr)
 		memset(payload_tosend, 0, SEND_SIZE * sizeof(uint8_t)); //FX
 
 		//uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32_t pid)
-
+		//pthread_mutex_lock(&pdu_gets);
 		payload_back = ue_test.UE[rnti].ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
+		//pthread_mutex_unlock(&pdu_gets);
+
 		ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
 		// printf("Now this pdu belongs to HARQ NO.%d\n",pid_now);
 
@@ -129,19 +134,18 @@ void *lte_send_udp(void *ptr)
 		// }
 
 		//FX   发送DCI
-		char temp_DCI[100];
-		D_DCI DCI_0;
+
 		DCI_0.N_pid_now = pid_now;
 
 		memset(temp_DCI, 0, sizeof(temp_DCI));
 		memcpy(temp_DCI, &DCI_0, sizeof(D_DCI));
 		if (sendto(st_a, temp_DCI, sizeof(DCI_0), 0, (struct sockaddr *)&addr_a, sizeof(addr_a)) == -1)
 		{
-			printf("DCI:sendto failed ! error message :%s\n", strerror(errno));
+			printf("RNTI:%d:::DCI:sendto failed ! error message :%s\n", rnti, strerror(errno));
 		}
 		else
 		{
-			printf("Thread_UDP UE No.%d: UDP trans begin! NO.%d:DCI succeed!\n", port_add, pid_now);
+			printf("RNTI:%d::: UDP trans begin! NO.%d:DCI succeed!\n", rnti, pid_now);
 		}
 		//end
 
@@ -150,11 +154,17 @@ void *lte_send_udp(void *ptr)
 		//添加一个轮询pid_now,如果当前这个pid_now的ACK正在被rece修改，则去取下一个
 
 		//
-		payload_tosend = ue_test.UE[rnti].trans_control(pid_now, pdu_sz_test, port_add);
+		payload_tosend = ue_test.UE[rnti].trans_control(pid_now, pdu_sz_test);
+		if (payload_tosend == NULL)
+		{
+			printf("RNTI:%d::: This TTI no pdu to send!\n", rnti);
+			usleep(200000);
+			continue;
+		}
 		if (sendto(st, payload_tosend, pdu_sz_test, 0, (struct sockaddr *)&addr,
 				   sizeof(addr)) == -1)
 		{
-			printf("sendto failed ! error message :%s\n", strerror(errno));
+			printf("RNTI:%d::: sendto failed ! error message :%s\n", rnti, strerror(errno));
 			break;
 		}
 

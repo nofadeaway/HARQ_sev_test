@@ -21,7 +21,7 @@ extern UE_FX ue_test;    //map容器
 // 	bool ack_0;
 // };
 
-pthread_mutex_t ACK_LOCK = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t ACK_LOCK = PTHREAD_MUTEX_INITIALIZER;
 extern pthread_barrier_t barrier;
 /**************************************************************************
 * ipsend:从tun中读数据并压入队列
@@ -132,12 +132,12 @@ void *lte_rece(void *ptr)
 		else
 		{
 			memcpy(&ack_reply, temp, sizeof(ack_reply));
-			if (pthread_mutex_lock(&ACK_LOCK) != 0)
+			if (pthread_mutex_lock(&ue_test.UE[rnti].ACK_LOCK) != 0)
 			{
 				printf("RECE:Lock failed!\n");
 			}
 			ue_test.UE[rnti].ACK[ack_reply.ACK_pid] = ack_reply.ack_0;
-			pthread_mutex_unlock(&ACK_LOCK);
+			pthread_mutex_unlock(&ue_test.UE[rnti].ACK_LOCK);
 			char str1[10] = "true", str2[10] = "false";
 			printf("/******lte-Recv:");
 			printf("RNTI:%d::: No.%d ACK received is %s\n",rnti, ack_reply.ACK_pid, (ack_reply.ack_0) ? str1 : str2);
