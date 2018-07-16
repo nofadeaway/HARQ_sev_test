@@ -8,7 +8,8 @@ pthread_t id[50]; //预留100可以创建个线程
 
 rlc_um rlc3;
 rlc_um rlc_test[4];
-mac_dummy_timers timers_test;
+RLC_FX rlc_0;
+//mac_dummy_timers timers_test;
 //mux ue_mux_test;
 //demux mac_demux_test;
 demux mac_demux_test_trans; //用于发送方的,其中自动会有pdu_queue
@@ -27,12 +28,12 @@ pthread_barrier_t barrier; //屏障,用于一开始线程初始化
 * rlc-class
 **************************************************************************/
 
-class rlc_um_tester_3
-	:public pdcp_interface_rlc
-	, public rrc_interface_rlc
+class rlc_um_tester
+	: public pdcp_interface_rlc,
+	  public rrc_interface_rlc
 {
-public:
-	rlc_um_tester_3() { n_sdus = 0; }
+  public:
+	rlc_um_tester() { n_sdus = 0; }
 
 	// PDCP interface
 	void write_pdu(uint32_t lcid, byte_buffer_t *sdu)
@@ -40,6 +41,9 @@ public:
 		assert(lcid == 3);
 		sdus[n_sdus++] = sdu;
 	}
+	void write_pdu_bcch_bch(byte_buffer_t *sdu) {}
+	void write_pdu_bcch_dlsch(byte_buffer_t *sdu) {}
+	void write_pdu_pcch(byte_buffer_t *sdu) {}
 
 	// RRC interface
 	void max_retx_attempted() {}
@@ -48,35 +52,42 @@ public:
 	int n_sdus;
 };
 
-
 /////////////////
 class rlc_mac_tester
-	:public rlc_interface_mac  
+	: public rlc_interface_mac
 {
-public:
-  	 uint32_t get_buffer_state(uint32_t lcid)
-	{if(lcid==3){
-		return rlc3.get_buffer_state();
+  public:
+	uint16_t rnti;
+	uint32_t get_buffer_state(uint32_t lcid)
+	{
+		if (lcid == 3)
+		{
+			return rlc_test[rnti].get_buffer_state();
+		}
+		else
+			return 0;
+		//else{//lcid==4以及其他
+		//	return rlc4.get_buffer_state();
+		//}
 	}
-	//else{//lcid==4以及其他
-	//	return rlc4.get_buffer_state();
-	//}	
-	}
 
-   uint32_t get_total_buffer_state(uint32_t lcid) {}
+	uint32_t get_total_buffer_state(uint32_t lcid) {}
 
-   const static int MAX_PDU_SEGMENTS = 20;
+	const static int MAX_PDU_SEGMENTS = 20;
 
-  /* MAC calls RLC to get RLC segment of nof_bytes length.
+	/* MAC calls RLC to get RLC segment of nof_bytes length.
    * Segmentation happens in this function. RLC PDU is stored in payload. */
-   	int read_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
+	int read_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
 	{
 		int len;
-		if(lcid==3){
-			len=rlc3.read_pdu(payload,nof_bytes);
+		if (lcid == 3)
+		{
+			len = rlc_test[rnti].read_pdu(payload, nof_bytes);
 		}
+		else
+			len = 0;
 		//else{//lcid==4以及其他
-			//len=rlc4.read_pdu(payload,nof_bytes);printf("HERE4444\n");
+		//len=rlc4.read_pdu(payload,nof_bytes);printf("HERE4444\n");
 		//}
 		return len;
 	}
@@ -85,13 +96,27 @@ public:
 	* PDU gets placed into the buffer and higher layer thread gets notified. */
 	void write_pdu(uint32_t lcid, uint8_t *payload, uint32_t nof_bytes)
 	{
-		if (lcid == 3) {
+		if (lcid == 3)
+		{
 
-			rlc3.write_pdu(payload, nof_bytes); 
-		}//else{//lcid==4以及其他
-		 //rlc4.write_pdu(payload,nof_bytes);printf("HERE4444\n");
-		 //}	
+			rlc_test[rnti].write_pdu(payload, nof_bytes);
+		} //else{//lcid==4以及其他
+		  //rlc4.write_pdu(payload,nof_bytes);printf("HERE4444\n");
+		  //}
 	}
+};
+
+class rlc_mac_tester_group
+{
+   public:
+   rlc_mac_tester N[4];
+   void init()
+   {
+	   for(uint16_t i=0;i<4;++i)
+	   {
+		   N[i].rnti=i;
+	   }
+   }
 };
 
 /**************************************************************************
@@ -226,24 +251,25 @@ int main(void)
 	/**********************************************
 	* rlc-um-1-lcid-3
 	***********************************************/
-	srslte::log_stdout log3("RLC_UM_3");
-	
-	log3.set_level(srslte::LOG_LEVEL_DEBUG);
-	
-	log3.set_hex_limit(-1);
-	
-	rlc_um_tester_3    tester_3;
-	//mac_dummy_timers timers; 
- 
-	rlc3.init(&log3, 3, &tester_3, &tester_3, &timers_test);//LCID=3!!!!!!
+	// srslte::log_stdout log3("RLC_UM_3");
 
-	LIBLTE_RRC_RLC_CONFIG_STRUCT cnfg;
-	cnfg.rlc_mode = LIBLTE_RRC_RLC_MODE_UM_BI;
-	cnfg.dl_um_bi_rlc.t_reordering = LIBLTE_RRC_T_REORDERING_MS5;
-	cnfg.dl_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
-	cnfg.ul_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
+	// log3.set_level(srslte::LOG_LEVEL_DEBUG);
 
-	rlc3.configure(&cnfg);
+	// log3.set_hex_limit(-1);
+
+	// rlc_um_tester tester_3;
+	// mac_dummy_timers timers_test;
+	// //mac_dummy_timers timers;
+
+	// rlc3.init(&log3, 3, &tester_3, &tester_3, &timers_test); //LCID=3!!!!!!
+
+	// LIBLTE_RRC_RLC_CONFIG_STRUCT cnfg;
+	// cnfg.rlc_mode = LIBLTE_RRC_RLC_MODE_UM_BI;
+	// cnfg.dl_um_bi_rlc.t_reordering = LIBLTE_RRC_T_REORDERING_MS5;
+	// cnfg.dl_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
+	// cnfg.ul_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
+
+	// rlc3.configure(&cnfg);
 
 	/***********************************************
 	* MAC-MUX
@@ -290,11 +316,34 @@ int main(void)
 
 	// mac_demux_test.init(&phy_interface_mac_test, &rlc_test, &log1); //,&timers_test);
 
+	srslte::log_stdout log3("RLC_UM_3");
+
+	log3.set_level(srslte::LOG_LEVEL_DEBUG);
+
+	log3.set_hex_limit(-1);
+
+	rlc_um_tester tester_init;
+	mac_dummy_timers timers_test;
+
+	LIBLTE_RRC_RLC_CONFIG_STRUCT cnfg;
+	cnfg.rlc_mode = LIBLTE_RRC_RLC_MODE_UM_BI;
+	cnfg.dl_um_bi_rlc.t_reordering = LIBLTE_RRC_T_REORDERING_MS5;
+	cnfg.dl_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
+	cnfg.ul_um_bi_rlc.sn_field_len = LIBLTE_RRC_SN_FIELD_LENGTH_SIZE10;
+	//mac_dummy_timers timers;
+	for (int i = 0; i < 4; ++i)
+	{
+		rlc_test[i].init(&log3, 3, &tester_init, &tester_init, &timers_test); //LCID=3!!!!!!
+        rlc_test[i].configure(&cnfg);
+	}
+
 	srslte::log_stdout log5("FX_MAC");
 	log5.set_level(srslte::LOG_LEVEL_DEBUG);
 	log5.set_hex_limit(-1);
 	phy_interface_mac phy_interface_mac_test;
-	rlc_mac_tester rlc_test;
+	//rlc_mac_tester rlc_test;
+	rlc_mac_tester_group rlc_test_g;
+	rlc_test_g.init();
 	bsr_proc bsr_test;
 	phr_proc phr_test;
 	pdu_queue::process_callback *callback_test; //
@@ -308,7 +357,7 @@ int main(void)
 	{
 		//ue_test.UE.insert(std::make_pair(i,ue_temp));
 		ue_test.UE[i].rnti = i;
-		ue_test.UE[i].init(&phy_interface_mac_test, &rlc_test, &log5, &bsr_test, &phr_test, callback_test);
+		ue_test.UE[i].init(&phy_interface_mac_test, &rlc_test_g.N[i], &log5, &bsr_test, &phr_test, callback_test);
 	}
 
 	//线程创建

@@ -77,8 +77,6 @@ public:
 * rlc-class
 **************************************************************************/
 
-
-
 class UE_process_FX //处理之前的程序
 {
 public:
@@ -89,15 +87,15 @@ public:
   mux ue_mux_test;
   demux mac_demux_test;
   //demux mac_demux_test_trans;       //用于发送方的，其中自动会有pdu_queue
-  srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8，既最多缓存8个PDU
+  srslte::pdu_queue pdu_queue_test;   //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8，既最多缓存8个PDU队列
   bool ACK[HARQ_NUM] = {false, false, false, false, false, false, false, false};
-  bool ACK_default[HARQ_NUM]= {false, false, false, false, false, false, false, false};
+  bool ACK_default[HARQ_NUM] = {false, false, false, false, false, false, false, false};
 
   void *pdu_store(uint32_t pid_now, uint8_t *payload_back, uint32_t pdu_sz_test)
   {
     bool qbuff_flag;
     //payload_back = ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
-    printf("RNTI:%d:::Now this pdu belongs to HARQ NO.%d\n",rnti, pid_now);
+    printf("RNTI:%d:::Now this pdu belongs to HARQ NO.%d\n", rnti, pid_now);
 
     //begin{5.28添加}
     //if(pdu_queue_test.request_buffer(pid_now,pdu_sz_test))     //request_buffer函数返回指为qbuff中ptr指针，而在下面send中其实并不需要使用
@@ -106,11 +104,11 @@ public:
     qbuff_flag = pdu_queue_test.pdu_q[pid_now].send(payload_back, pdu_sz_test); //把payload)back存入qbuff
     if (qbuff_flag)
     {
-      printf("RNTI:%d:::Succeed in sending PDU to queue's buffer!\n",rnti);
+      printf("RNTI:%d:::Succeed in sending PDU to queue's buffer!\n", rnti);
     }
     else
     {
-      printf("RNTI:%d:::Fail in sending PDU to queue's buffer!\n",rnti);
+      printf("RNTI:%d:::Fail in sending PDU to queue's buffer!\n", rnti);
     }
   }
 
@@ -140,7 +138,7 @@ public:
     {
       //payload_tosend = payload_back;
 
-      pdu_queue_test.pdu_q[pid_now].release();                                                                                                     //将前一个已经收到对应ACK的PDU丢弃
+      pdu_queue_test.pdu_q[pid_now].release();                                                                                       //将前一个已经收到对应ACK的PDU丢弃
       printf("RNTI:%d::: Now PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is()); //接收到ACK，发送下一个PDU
       return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len);
     }
@@ -168,23 +166,24 @@ public:
     }
   }
 
-  bool init(phy_interface_mac* phy_h_,rlc_interface_mac *rlc_, srslte::log *log_h_, bsr_proc *bsr_procedure_, phr_proc *phr_procedure_,pdu_queue::process_callback *callback_)
+  bool init(phy_interface_mac *phy_h_, rlc_interface_mac *rlc_, srslte::log *log_h_, bsr_proc *bsr_procedure_, phr_proc *phr_procedure_, pdu_queue::process_callback *callback_)
   {
-     //rnti=rnti_;
-     ue_mux_test.init(rlc_, log_h_, bsr_procedure_, phr_procedure_);
-     pdu_queue_test.init(callback_,log_h_);
-     mac_demux_test.init(phy_h_, rlc_, log_h_);
-
+    //rnti=rnti_;
+    ue_mux_test.init(rlc_, log_h_, bsr_procedure_, phr_procedure_);
+    pdu_queue_test.init(callback_, log_h_);
+    mac_demux_test.init(phy_h_, rlc_, log_h_);
   }
 };
 
-
-
-
-class UE_FX        //日后用于多用户情况
+class UE_FX //日后用于多用户情况
 {
 public:
   std::map<uint16_t, UE_process_FX> UE;
 };
 
+/*********    RLC测试      **********/
+class RLC_FX
+{
+  std::map<uint16_t, rlc_um> rlc;
+};
 #endif

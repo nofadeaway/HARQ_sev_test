@@ -7,6 +7,6 @@ LIBS = -lm -lpthread -lboost_system -lboost_filesystem -lboost_thread -lboost_da
 CPPFLAGS = -g -O3 -Wall -I ../hdr -I ../src/commom -I ../../liblte/hdr
            
 main: ${OBJS}
-	g++ -o ${DEST} ${OBJS} ${LIBS}
+	g++ -o   ${DEST} ${OBJS} ${LIBS}
 clean:
 	rm -f ${DEST} ${OBJS}

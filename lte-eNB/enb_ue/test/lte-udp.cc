@@ -53,16 +53,16 @@ void *lte_send_udp(void *ptr)
 	addr.sin_port = htons(port);
 	addr.sin_addr.s_addr = inet_addr("10.129.4.106"); //目的实际地址
 
-	uint8_t *payload_test = new uint8_t[SEND_SIZE];
-	uint8_t *payload_back = new uint8_t[SEND_SIZE];
-
+	
+	uint8_t *payload_back;
+    uint8_t *payload_test = new uint8_t[SEND_SIZE];
 	uint32_t pdu_sz_test = 300; //下面其实应该发送最终打包长度吧,待修改
 	uint32_t tx_tti_test = 1;
 	uint32_t pid_test = 8; //目前暂时只有1个进程
 	uint32_t pid_now = 0;
 
 	//begin{5.29}
-	uint8_t *payload_tosend = new uint8_t[SEND_SIZE];
+	uint8_t *payload_tosend;
 	// bool qbuff_flag=false;   //记录 qbuff::send()返回值
 	//end{5.29}
 
@@ -89,16 +89,18 @@ void *lte_send_udp(void *ptr)
 
 	while (1)
 	{
-
-		memset(payload_test, 0, SEND_SIZE * sizeof(uint8_t));
-		memset(payload_back, 0, SEND_SIZE * sizeof(uint8_t));
-		memset(payload_tosend, 0, SEND_SIZE * sizeof(uint8_t)); //FX
+		
+	    //uint8_t *payload_back = new uint8_t[SEND_SIZE];
+       
+		memset(payload_test,0,SEND_SIZE*sizeof(uint8_t));
+		//memset(payload_back, 0, SEND_SIZE * sizeof(uint8_t));
+		 //FX
 
 		//uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32_t pid)
 		//pthread_mutex_lock(&pdu_gets);
 		payload_back = ue_test.UE[rnti].ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
 		//pthread_mutex_unlock(&pdu_gets);
-
+        
 		ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
 		// printf("Now this pdu belongs to HARQ NO.%d\n",pid_now);
 
@@ -169,6 +171,7 @@ void *lte_send_udp(void *ptr)
 		}
 
 		usleep(200000);
+		//sleep(1);
 		//FX：end{发送udp}
 		/**********************************/
 
@@ -190,9 +193,9 @@ void *lte_send_udp(void *ptr)
 		//5.28添加
 	}
 
-	delete[] payload_back;
+	//delete[] payload_back;
 	delete[] payload_test;
-	delete[] payload_tosend;
+	//delete[] payload_tosend;
 
 	close(st);
 

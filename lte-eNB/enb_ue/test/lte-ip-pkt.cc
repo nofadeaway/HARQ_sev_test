@@ -55,13 +55,13 @@ void *lte_send_ip_3(void *ptr)
 		sdu_bufs[k].msg = buffer[k]; //index
 		sdu_bufs[k].N_bytes = nread; //size
         
-		rlc3.write_sdu(&sdu_bufs[k]);
+		//rlc3.write_sdu(&sdu_bufs[k]);
 		//匹配目的ip，基站端
 		//if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==1)){
-        // for(int i=0;i<4;++i)
-		// {
-		// rlc_test[i].write_sdu(&sdu_bufs[k]);
-		// }
+        for(int i=0;i<4;++i)
+		{
+		rlc_test[i].write_sdu(&sdu_bufs[k]);
+		}
 		//}//else if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==2))
 
 		usleep(1000); //linux下 \sleep(),里面变量单位是秒
