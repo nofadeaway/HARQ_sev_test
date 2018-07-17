@@ -134,7 +134,7 @@ uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32
  
 // Logical Channel Procedure修改-----组包一个没有完整控制信息的SDU包
 
-  pdu_msg.init_tx(payload, pdu_sz, true);
+  pdu_msg.init_tx(payload, pdu_sz, true);        //pdu.h 77行
 
   // MAC control element for C-RNTI or data from UL-CCCH-----但是现在我们不接收来自CCCH的数据
   //if (!allocate_sdu(0, &pdu_msg, -1, NULL)) {

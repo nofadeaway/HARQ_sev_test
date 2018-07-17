@@ -41,7 +41,7 @@ public:
     unread++; 
     unread_bytes += msg->N_bytes;
     lock.unlock();
-    not_empty.notify_one();
+    not_empty.notify_one();   //boost库中的条件变量通知
   }
 
   void read(byte_buffer_t **msg)

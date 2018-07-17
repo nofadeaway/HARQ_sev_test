@@ -18,6 +18,7 @@
 #include <map>
 
 #include "FuncHead.h"
+#include "../hdr/upper/rlc_um.h"
 #include "../hdr/common/log.h"
 #include "../hdr/mac/mac.h"
 #include "../hdr/common/pcap.h"

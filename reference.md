@@ -112,3 +112,7 @@ send()函数只能用于连接已经建立的情况，未建立连接时用sendt
     ip-pkt中把 1000改成了200,可能之前是内存不够大了，线程创建则马上溢出
     rlc_um.h msg_queue
     mux.cc bool mux::allocate_sdu(uint32_t lcid, srslte::sch_pdu* pdu_msg, int max_sdu_sz, uint32_t* sdu_sz)  //从rlc拉取数据
+
+7.16 rlc链表  msg_queue write/read
+    muc.cc: pdu_get ->allocate_sdu -> set_pdu (pdu.cc 541) ---> rlc.read_pdu
+    --->rlc_um.cc 168 --->bulid_data_pdu(226) --->tx_sdu_queue.read(&tx_sdu)-->msq_queue.h 47 把buf[tail]赋值给了tx_sdu

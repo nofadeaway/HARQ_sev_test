@@ -55,7 +55,7 @@ void *lte_send_udp(void *ptr)
 
 	
 	uint8_t *payload_back;
-    uint8_t *payload_test = new uint8_t[SEND_SIZE];
+    uint8_t *payload_test = new uint8_t[10240];
 	uint32_t pdu_sz_test = 300; //下面其实应该发送最终打包长度吧,待修改
 	uint32_t tx_tti_test = 1;
 	uint32_t pid_test = 8; //目前暂时只有1个进程
@@ -92,7 +92,7 @@ void *lte_send_udp(void *ptr)
 		
 	    //uint8_t *payload_back = new uint8_t[SEND_SIZE];
        
-		memset(payload_test,0,SEND_SIZE*sizeof(uint8_t));
+		memset(payload_test,0,10240*sizeof(uint8_t));
 		//memset(payload_back, 0, SEND_SIZE * sizeof(uint8_t));
 		 //FX
 
