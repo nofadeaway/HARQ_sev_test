@@ -153,7 +153,7 @@ public:
         //uint32_t len=pdu_sz_test;
         //payload_tosend =(uint8_t*) pdu_queue_test.pdu_q[pid_now].pop(&len);   //暂时是前7个进程一直ACK为true，第8个ACK一直为false
         printf("RNTI:%d::: Now PID NO.%d:the retransmission size is %d bytes.\n", rnti, pid_now, len);
-        printf("RNTI:%d::: Now retransmission of PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is() + 1);
+        printf("RNTI:%d::: Now retransmission of PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is() );
 
         return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len);
       }
