@@ -10,7 +10,7 @@ using namespace srsue;
 extern rlc_um rlc_test[];
 extern rlc_um rlc3;
 extern int tun_fd;
-
+extern RLC_interface_FX rlc_inter;
 /**************************************************************************
 * lte_send_ip_3:从tun中读数据并压入队列
 **************************************************************************/
@@ -45,26 +45,31 @@ void *lte_send_ip_3(void *ptr)
 		}
 		//data from tun/tap: 想读取sizeof(buffer)个数据,成功则返回读取的实际字节数nread
 		nread = read(tun_fd, buffer[k], BUFSIZE);
-
+        //printf("LKLKLK!\n");
 		if (nread <= 0)
 		{
 			perror("Nothing reading");
 			exit(1);
 		}
-
+        //printf("IP-PKT:::NOW READ %d!!!\n",nread);
 		sdu_bufs[k].msg = buffer[k]; //index
 		sdu_bufs[k].N_bytes = nread; //size
         
 		//rlc3.write_sdu(&sdu_bufs[k]);
 		//匹配目的ip，基站端
 		//if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==1)){
-        for(int i=0;i<4;++i)
-		{
-		rlc_test[i].write_sdu(&sdu_bufs[k]);
+        //for(int i=0;i<1;++i)
+		//{
+		rlc_test[0].write_sdu(&sdu_bufs[k]);
+
+		printf("IP-PKT-:::Now %d rlc_in is %d.\n",i,rlc_test[i].n_unread());
+		//printf("kkk!!!\n");
 		}
+
+		//printf("CYCLE END!\n");
 		//}//else if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==2))
 
-		usleep(1000); //linux下 \sleep(),里面变量单位是秒
+		//usleep(1000); //linux下 \sleep(),里面变量单位是秒
 		k++;
 	}
 }

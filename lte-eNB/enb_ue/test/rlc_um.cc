@@ -1,3 +1,5 @@
+#include "upper/rlc_um.h"
+#include "../hdr/upper/rlc_um.h"
 #include "FuncHead.h"
 
 extern int tun_fd;
@@ -124,6 +126,10 @@ uint32_t rlc_um::get_bearer()
   return lcid;
 }
 
+uint32_t rlc_um::n_unread()
+{
+  return tx_sdu_queue.size();
+}
 /****************************************************************************
  * PDCP interface
  ***************************************************************************/
@@ -687,5 +693,6 @@ bool rlc_um_end_aligned(uint8_t fi)
 {
   return (fi == RLC_FI_FIELD_START_AND_END_ALIGNED || fi == RLC_FI_FIELD_NOT_START_ALIGNED);
 }
+
 
 } // namespace srsue

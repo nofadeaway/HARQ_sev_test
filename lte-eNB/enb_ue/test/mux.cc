@@ -137,17 +137,17 @@ uint8_t* mux::pdu_get(uint8_t *payload, uint32_t pdu_sz, uint32_t tx_tti, uint32
   pdu_msg.init_tx(payload, pdu_sz, true);        //pdu.h 77行
 
   // MAC control element for C-RNTI or data from UL-CCCH-----但是现在我们不接收来自CCCH的数据
-  //if (!allocate_sdu(0, &pdu_msg, -1, NULL)) {
-  //   printf("pending_crnti_ce is %d",pending_crnti_ce);
-  //   if (pending_crnti_ce) {
-  //     if (pdu_msg.new_subh()) {
-  //       if (!pdu_msg.get()->set_c_rnti(pending_crnti_ce)) {
-  //         Warning("Pending C-RNTI CE could not be inserted in MAC PDU\n");
-  //       }
-  //     }
-  //   }
-  // //} 
-  // pending_crnti_ce = 0; 
+  if (!allocate_sdu(0, &pdu_msg, -1, NULL)) {
+    //printf("pending_crnti_ce is %d",pending_crnti_ce);
+    if (pending_crnti_ce) {
+      if (pdu_msg.new_subh()) {
+        if (!pdu_msg.get()->set_c_rnti(pending_crnti_ce)) {
+          Warning("Pending C-RNTI CE could not be inserted in MAC PDU\n");
+        }
+      }
+    }
+  } 
+  pending_crnti_ce = 0; 
   /* 
   bsr_proc::bsr_t bsr; 
   //修改bool regular_bsr = bsr_procedure->need_to_send_bsr_on_ul_grant(pdu_msg.rem_size(), &bsr);printf("HERE32\n");
@@ -200,9 +200,19 @@ bool bsr_is_inserted = false;
       }    
     }
   }printf("HERE7\n");
-*/  
+*/ 
+  
+  // int muc_result=pdu_msg.get_pdu_len()-pdu_msg.rem_size();
+  // if(muc_result == 0)
+  //    return NULL;
+  //printf("pdu_msg.get_pdu_len() is %d.\n",pdu_msg.get_pdu_len());
+  //printf("pdu_msg.rem_size() is %d.\n",pdu_msg.rem_size());
+  // if(pdu_msg.get_pdu_len()==pdu_msg.rem_size())
+  // {
+  //   return NULL;
+  // }
   Debug("Assembled MAC PDU msg size %d/%d bytes\n", pdu_msg.get_pdu_len()-pdu_msg.rem_size(), pdu_sz);
-
+ 
   /* Generate MAC PDU and save to buffer */
   uint8_t *ret = pdu_msg.write_packet(log_h);          //pdu.cc 114
 printf("------------end_pdu_get----------------\n");
@@ -228,19 +238,23 @@ bool mux::allocate_sdu(uint32_t lcid, srslte::sch_pdu* pdu_msg, int max_sdu_sz, 
  
   // Get n-th pending SDU pointer and length
   int sdu_len = rlc->get_buffer_state(lcid); 
-
-  if (sdu_len > 0 && sdu_len<43855) { // there is pending SDU to allocate小于一个数而不是没有数字
+  //if (sdu_len > 0 && sdu_len<43855) {
+  if (sdu_len > 0 ) { // there is pending SDU to allocate小于一个数而不是没有数字
 
     //printf("\nhere_lcid = %d,max_sdu_sz = %d,rlc_buffer_sdu_len = %d\n",lcid,max_sdu_sz,sdu_len);///
 
     int buffer_state = sdu_len; 
-    if (sdu_len > max_sdu_sz && max_sdu_sz >= 0) {
+     //printf("\n\n!!!Now sdu_len is %d!!!\n\n",sdu_len);    
+    if (sdu_len > max_sdu_sz && max_sdu_sz >= 0) {    //-1 means infinity
       sdu_len = max_sdu_sz;
     }
+    //printf("\n\n!!!Now max_sdu_sz is %d!!!\n\n",max_sdu_sz);   
     int sdu_space = pdu_msg->get_sdu_space();
+    //printf("\n\n!!!Now sdu_space is %d!!!\n\n",sdu_space); 
     if (sdu_len > sdu_space) {
       sdu_len = sdu_space;
-    }        
+    }    
+    //printf("\n\n!!!Now sdu_len is %d!!!\n\n",sdu_len);    
     if (sdu_len > MIN_RLC_SDU_LEN) {
       if (pdu_msg->new_subh()) { // there is space for a new subheader
        // int sdu_len2 = sdu_len;这一步一点用都没有啊 

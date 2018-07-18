@@ -116,3 +116,14 @@ send()函数只能用于连接已经建立的情况，未建立连接时用sendt
 7.16 rlc链表  msg_queue write/read
     muc.cc: pdu_get ->allocate_sdu -> set_pdu (pdu.cc 541) ---> rlc.read_pdu
     --->rlc_um.cc 168 --->bulid_data_pdu(226) --->tx_sdu_queue.read(&tx_sdu)-->msq_queue.h 47 把buf[tail]赋值给了tx_sdu
+    rlc_um::rlc_um() : tx_sdu_queue(24) 11 rlc队列大小
+    新版的基站程序里 rlc层添加了 users[rnti]
+
+7.18
+    uint32_t unread();  rlc_um添加了这个函数
+    发现mux.cc 的 249行的if判断里sdu_len=0,因而根本没有执行set_pdu
+
+    空包的条件： adding new SDU segment - 1500 bytes of 1500 remaining ///allocated=-1/299,/// last_sdu=-1
+
+  /* Determine if we are transmitting CEs only. */
+  bool ce_only = last_sdu_idx<0?true:false;   //FX   pdu.cc 110

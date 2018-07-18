@@ -8,6 +8,7 @@
 
 #define SEND_SIZE 400
 #define HARQ_NUM 8
+#define SIZE_RLC_QUEUE 24
 
 #include <string.h>
 #include <strings.h>
@@ -87,19 +88,24 @@ public:
   //mac_dummy_timers timers_test;
   mux ue_mux_test;
   demux mac_demux_test;
-  //demux mac_demux_test_trans;       //用于发送方的，其中自动会有pdu_queue
-  srslte::pdu_queue pdu_queue_test;   //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8，既最多缓存8个PDU队列
+  //demux mac_demux_test_trans;       //用于发送方的,其中自动会有pdu_queue
+  srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8,既最多缓存8个PDU队列
   bool ACK[HARQ_NUM] = {false, false, false, false, false, false, false, false};
   bool ACK_default[HARQ_NUM] = {false, false, false, false, false, false, false, false};
 
   void *pdu_store(uint32_t pid_now, uint8_t *payload_back, uint32_t pdu_sz_test)
   {
+    if (!payload_back)
+    {
+      printf("RNTI:%d:::No data to store in queue.\n", rnti);
+      return NULL;
+    }
     bool qbuff_flag;
     //payload_back = ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
     printf("RNTI:%d:::Now this pdu belongs to HARQ NO.%d\n", rnti, pid_now);
 
     //begin{5.28添加}
-    //if(pdu_queue_test.request_buffer(pid_now,pdu_sz_test))     //request_buffer函数返回指为qbuff中ptr指针，而在下面send中其实并不需要使用
+    //if(pdu_queue_test.request_buffer(pid_now,pdu_sz_test))     //request_buffer函数返回指为qbuff中ptr指针,而在下面send中其实并不需要使用
     //{printf("PID No.%d:queue's buffer request succeeded!\n",pid_now);}
 
     qbuff_flag = pdu_queue_test.pdu_q[pid_now].send(payload_back, pdu_sz_test); //把payload)back存入qbuff
@@ -130,7 +136,7 @@ public:
     pthread_mutex_lock(&ACK_LOCK);
     bool ACK_temp = ACK[pid_now];
     pthread_mutex_unlock(&ACK_LOCK);
-    // if(pdu_queue_test.pdu_q[pid_now].isempty())         //不需要，pop函数里面，若队列空，会返回NUll
+    // if(pdu_queue_test.pdu_q[pid_now].isempty())         //不需要,pop函数里面,若队列空,会返回NUll
     // {
     //   printf("RNTI %d::: No PDU in queue!\n",rnti);
     //   return NULL;
@@ -140,10 +146,10 @@ public:
       //payload_tosend = payload_back;
 
       pdu_queue_test.pdu_q[pid_now].release();                                                                                       //将前一个已经收到对应ACK的PDU丢弃
-      printf("RNTI:%d::: Now PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is()); //接收到ACK，发送下一个PDU
+      printf("RNTI:%d::: Now PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is()); //接收到ACK,发送下一个PDU
       return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len);
     }
-    else //没收到ACK，重发
+    else //没收到ACK,重发
     {
       //memcpy(payload_tosend, pdu_queue_test.pdu_q[pid_now].pop(pdu_sz_test,1), pdu_sz_test);
       retrans_times[pid_now]++;
@@ -151,9 +157,9 @@ public:
       if (retrans_times[pid_now] < retrans_limit)
       {
         //uint32_t len=pdu_sz_test;
-        //payload_tosend =(uint8_t*) pdu_queue_test.pdu_q[pid_now].pop(&len);   //暂时是前7个进程一直ACK为true，第8个ACK一直为false
+        //payload_tosend =(uint8_t*) pdu_queue_test.pdu_q[pid_now].pop(&len);   //暂时是前7个进程一直ACK为true,第8个ACK一直为false
         printf("RNTI:%d::: Now PID NO.%d:the retransmission size is %d bytes.\n", rnti, pid_now, len);
-        printf("RNTI:%d::: Now retransmission of PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is() );
+        printf("RNTI:%d::: Now retransmission of PID No.%d:queue's No.%d buffer will be sent.\n", rnti, pid_now, pdu_queue_test.pdu_q[pid_now].rp_is());
 
         return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len);
       }
@@ -162,7 +168,7 @@ public:
         retrans_times[pid_now] = 0;
         pdu_queue_test.pdu_q[pid_now].release(); //丢弃超过重发次数的PDU
         printf("RNTI:%d::: The retransmission times overflow!\n", rnti);
-        return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len); //返回下一个PDU的指针，超过重发次数，丢弃上一个包，发送下一个包
+        return (uint8_t *)pdu_queue_test.pdu_q[pid_now].pop(&len); //返回下一个PDU的指针,超过重发次数,丢弃上一个包,发送下一个包
       }
     }
   }
@@ -183,8 +189,43 @@ public:
 };
 
 /*********    RLC测试      **********/
-class RLC_FX
+class RLC_interface_FX
 {
-  std::map<uint16_t, rlc_um> rlc;
+public:
+  void init(rlc_um *rlc_)
+  {
+    rlc = rlc_;
+    idx = 0;
+    n_unread = 0;
+  }
+  bool set(unint16_t i_rnti)
+  {
+    if (n_unread != SIZE_RLC_QUEUE)
+    {
+      rnti[idx] = i_rnti;
+      idx = (idx + 1) % SIZE_RLC_QUEUE;
+      ++n_unread;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+  int had_to_mac()
+  {
+    if(n_unread>0)
+    {
+      return (--n_unread);
+    }
+  }
+
+private:
+  //std::map<uint16_t, uint32_t> unread_list;
+  uint32_t n_unread;
+  uint32_t idx;
+  uint32_t idx;
+  unint16_t rnti[SIZE_RLC_QUEUE];
+  rlc_um *rlc;
 };
 #endif

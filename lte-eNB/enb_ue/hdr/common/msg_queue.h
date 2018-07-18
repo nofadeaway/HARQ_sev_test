@@ -47,7 +47,7 @@ public:
   void read(byte_buffer_t **msg)
   { 
     boost::mutex::scoped_lock lock(mutex); 
-    while(is_empty()) not_empty.wait(lock); 
+    while(is_empty()) not_empty.wait(lock);  //printf("\n\nNow RLC READ!\n\n");
     *msg = buf[tail];
     tail = (tail+1)%capacity;
     unread--;
@@ -92,8 +92,8 @@ public:
   }
 
 private:
-  bool     is_empty() const { return unread == 0; }
-  bool     is_full() const { return unread == capacity; }
+  bool     is_empty() const { return (unread == 0); }
+  bool     is_full() const { return (unread == capacity); }
 
   boost::condition      not_empty;
   boost::condition      not_full;

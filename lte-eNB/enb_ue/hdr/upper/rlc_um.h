@@ -62,6 +62,9 @@ public:
 
   rlc_mode_t    get_mode();
   uint32_t      get_bearer();
+  
+  //FX
+  uint32_t n_unread();
 
   // PDCP interface
   void write_sdu(srslte::byte_buffer_t *sdu);

@@ -16,9 +16,10 @@ using namespace srsue;
 
 extern pthread_barrier_t barrier;
 extern pthread_mutex_t pdu_gets;
-
+extern rlc_um rlc_test[];
 //extern UE_process_FX fx_mac_test;
 extern UE_FX ue_test; //map容器
+extern RLC_interface_FX rlc_inter;
 
 void *lte_send_udp(void *ptr)
 {
@@ -86,7 +87,7 @@ void *lte_send_udp(void *ptr)
 	char temp_DCI[100];
 	D_DCI DCI_0;
 	pthread_barrier_wait(&barrier);
-
+    sleep(2);
 	while (1)
 	{
 		
@@ -100,10 +101,11 @@ void *lte_send_udp(void *ptr)
 		//pthread_mutex_lock(&pdu_gets);
 		payload_back = ue_test.UE[rnti].ue_mux_test.pdu_get(payload_test, pdu_sz_test, tx_tti_test, pid_now);
 		//pthread_mutex_unlock(&pdu_gets);
-        
+        printf("Now %d:::rlc_in is %d.\n",rnti,rlc_test[rnti].n_unread());
+		
 		ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
 		// printf("Now this pdu belongs to HARQ NO.%d\n",pid_now);
-
+         
 		// //begin{5.28添加}
 		// if(pdu_queue_test.request_buffer(pid_now,pdu_sz_test))     //request_buffer函数返回指为qbuff中ptr指针,而在下面send中其实并不需要使用
 		// {printf("PID No.%d:queue's buffer request succeeded!\n",pid_now);}
@@ -191,6 +193,7 @@ void *lte_send_udp(void *ptr)
 			pid_now = 0;
 		}
 		//5.28添加
+		
 	}
 
 	//delete[] payload_back;
