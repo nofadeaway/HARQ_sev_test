@@ -112,7 +112,7 @@ void* qbuff::pop()
   return pop(NULL);
 }
 
-void* qbuff::pop(uint32_t* len)
+void* qbuff::pop(uint32_t* len)          //pop操作会改变len的值
 {
   if (!isempty()) {
     if (len) {

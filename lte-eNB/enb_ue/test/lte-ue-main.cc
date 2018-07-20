@@ -8,7 +8,7 @@ pthread_t id[50]; //预留100可以创建个线程
 
 rlc_um rlc3;
 rlc_um rlc_test[4];
-RLC_FX rlc_0;
+//RLC_FX rlc_0;
 RLC_interface_FX rlc_inter;
 //mac_dummy_timers timers_test;
 //mux ue_mux_test;
@@ -350,7 +350,7 @@ int main(void)
 	pdu_queue::process_callback *callback_test; //
 	callback_test = &mac_demux_test_trans;		// 5.23
 
-	uint16_t user_n = 1;
+	uint16_t user_n = 4;
 	int err = -1;											  //用户数目
 	unsigned int count_barrier = user_n * 2 + 1, pth_now = 0; //用户数为n,n个udp,n个recv,1个ip-pkt,1个main,NONONO,主线程不需要等待
 	UE_process_FX ue_temp;
@@ -358,7 +358,7 @@ int main(void)
 	{
 		//ue_test.UE.insert(std::make_pair(i,ue_temp));
 		ue_test.UE[i].rnti = i;
-		ue_test.UE[i].init(&phy_interface_mac_test, &rlc_test_g.N[0], &log5, &bsr_test, &phr_test, callback_test);
+		ue_test.UE[i].init(&phy_interface_mac_test, &rlc_test_g.N[i], &log5, &bsr_test, &phr_test, callback_test);
 	}
 
 	//线程创建

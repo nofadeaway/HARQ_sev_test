@@ -127,3 +127,8 @@ send()函数只能用于连接已经建立的情况，未建立连接时用sendt
 
   /* Determine if we are transmitting CEs only. */
   bool ce_only = last_sdu_idx<0?true:false;   //FX   pdu.cc 110
+
+7.20
+   qbuff.cc 115  //pop操作会改变len的值
+   锁住的原因是 rlc 队列为空，因为rlc要往多个队列里面送?   rlc队列为空，mac::pdu_geti停在了rlc_read,而rlc那边的写程序也停住了
+    

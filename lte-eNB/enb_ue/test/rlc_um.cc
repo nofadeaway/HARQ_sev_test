@@ -10,7 +10,7 @@ using namespace srslte;
 
 namespace srsue{
 
-rlc_um::rlc_um() : tx_sdu_queue(24)
+rlc_um::rlc_um() : tx_sdu_queue(16)
 {
   tx_sdu = NULL;
   rx_sdu = NULL;

@@ -136,6 +136,7 @@ void *lte_rece(void *ptr)
 			{
 				printf("RECE:Lock failed!\n");
 			}
+			ue_test.UE[rnti].ack_recv(ack_reply.ACK_pid);
 			ue_test.UE[rnti].ACK[ack_reply.ACK_pid] = ack_reply.ack_0;
 			pthread_mutex_unlock(&ue_test.UE[rnti].ACK_LOCK);
 			char str1[10] = "true", str2[10] = "false";

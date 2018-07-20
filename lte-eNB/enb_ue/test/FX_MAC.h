@@ -85,6 +85,9 @@ public:
   //rlc_um_tester_3 i_rlc3;
   uint16_t rnti;
   pthread_mutex_t ACK_LOCK;
+  pthread_mutex_t busy_LOCK;
+  pthread_cond_t busy_signal;
+  uint32_t busy_num;
   //mac_dummy_timers timers_test;
   mux ue_mux_test;
   demux mac_demux_test;
@@ -92,6 +95,7 @@ public:
   srslte::pdu_queue pdu_queue_test; //自己添加的PDU排队缓存,目前支持的HARQ进程数最多为8,既最多缓存8个PDU队列
   bool ACK[HARQ_NUM] = {false, false, false, false, false, false, false, false};
   bool ACK_default[HARQ_NUM] = {false, false, false, false, false, false, false, false};
+  bool busy_index[HARQ_NUM] = {false, false, false, false, false, false, false, false};
 
   void *pdu_store(uint32_t pid_now, uint8_t *payload_back, uint32_t pdu_sz_test)
   {
@@ -119,12 +123,49 @@ public:
     }
   }
 
+  bool pdu_in(uint8_t *payload_back, uint32_t pdu_sz_test) // 将pdu存入为空闲状态的HARQ进程的队列，但只查找一次
+  {
+    pthread_mutex_lock(&busy_LOCK);
+    static uint32_t pid_not_busy = 0;
+    if (busy_num < HARQ_NUM) //有空闲的就存入空闲状态的
+    {
+      while (busy_index[pid_not_busy])
+      {
+        pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
+      }
+    }
+    else //无空闲的随便存
+    {
+      pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
+    }
+    pthread_mutex_unlock(&busy_LOCK);
+    if (pdu_store(pid_not_busy, payload_back, pdu_sz_test))
+      return true;
+    else
+      return false;
+  }
+  void reset(uint32_t pid)
+  {
+    pthread_mutex_lock(&busy_LOCK);
+    busy_index[pid] = false;
+    busy_num--;
+    pthread_mutex_unlock(&busy_LOCK);
+  }
+  void ack_recv(uint32_t pid)
+  {
+    pthread_mutex_lock(&busy_LOCK);
+    busy_index[pid] = false;
+    busy_num--;
+    pthread_cond_signal(&busy_signal);
+    pthread_mutex_unlock(&busy_LOCK);
+  }
+
   uint8_t *trans_control(uint32_t pid_now, uint32_t len)
   {
     int retrans_limit = 3;
     static int retrans_times[8] = {0};
     //begin{5.29}
-    uint8_t *payload_tosend = new uint8_t[SEND_SIZE];
+    //uint8_t *payload_tosend = new uint8_t[SEND_SIZE];
     //bool qbuff_flag=false;   //记录 qbuff::send()返回值
     //end{5.29}
 
@@ -176,9 +217,32 @@ public:
   bool init(phy_interface_mac *phy_h_, rlc_interface_mac *rlc_, srslte::log *log_h_, bsr_proc *bsr_procedure_, phr_proc *phr_procedure_, pdu_queue::process_callback *callback_)
   {
     //rnti=rnti_;
+    pthread_mutex_init(&ACK_LOCK, NULL);
+    pthread_mutex_init(&busy_LOCK, NULL);
+    pthread_cond_init(&busy_signal, NULL);
+    busy_num = 0;
     ue_mux_test.init(rlc_, log_h_, bsr_procedure_, phr_procedure_);
     pdu_queue_test.init(callback_, log_h_);
     mac_demux_test.init(phy_h_, rlc_, log_h_);
+  }
+  
+  uint8_t *harq_busy(uint32_t *pid, uint32_t len) //用于物理层发送，发送一个不出于busy状态的harq进程的pdu
+  {
+    pthread_mutex_lock(&busy_LOCK);
+    while (busy_num >= HARQ_NUM)
+    {
+      pthread_cond_wait(&busy_signal, &busy_LOCK);
+    }
+    uint32_t pid_not_busy = 0;
+    while (busy_index[pid_not_busy])
+    {
+      pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
+    }
+    busy_index[pid_not_busy] = true;
+    busy_num++;
+    *pid = pid_not_busy;
+    pthread_mutex_unlock(&busy_LOCK);
+    return trans_control(pid_not_busy, len);
   }
 };
 
@@ -191,6 +255,13 @@ public:
 /*********    RLC测试      **********/
 class RLC_interface_FX
 {
+private:
+  //std::map<uint16_t, uint32_t> unread_list;
+  uint32_t n_unread;
+  uint32_t idx;
+  uint16_t rnti[SIZE_RLC_QUEUE];
+  rlc_um *rlc;
+
 public:
   void init(rlc_um *rlc_)
   {
@@ -198,7 +269,7 @@ public:
     idx = 0;
     n_unread = 0;
   }
-  bool set(unint16_t i_rnti)
+  bool set(uint16_t i_rnti)
   {
     if (n_unread != SIZE_RLC_QUEUE)
     {
@@ -214,18 +285,10 @@ public:
   }
   int had_to_mac()
   {
-    if(n_unread>0)
+    if (n_unread > 0)
     {
       return (--n_unread);
     }
   }
-
-private:
-  //std::map<uint16_t, uint32_t> unread_list;
-  uint32_t n_unread;
-  uint32_t idx;
-  uint32_t idx;
-  unint16_t rnti[SIZE_RLC_QUEUE];
-  rlc_um *rlc;
 };
 #endif

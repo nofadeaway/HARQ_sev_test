@@ -19,7 +19,7 @@ extern pthread_mutex_t pdu_gets;
 extern rlc_um rlc_test[];
 //extern UE_process_FX fx_mac_test;
 extern UE_FX ue_test; //map容器
-extern RLC_interface_FX rlc_inter;
+
 
 void *lte_send_udp(void *ptr)
 {
@@ -92,7 +92,11 @@ void *lte_send_udp(void *ptr)
 	{
 		
 	    //uint8_t *payload_back = new uint8_t[SEND_SIZE];
-       
+        if(rlc_test[rnti].n_unread()<=0)
+		{
+			usleep(1000);
+			continue;
+		}
 		memset(payload_test,0,10240*sizeof(uint8_t));
 		//memset(payload_back, 0, SEND_SIZE * sizeof(uint8_t));
 		 //FX
@@ -103,7 +107,8 @@ void *lte_send_udp(void *ptr)
 		//pthread_mutex_unlock(&pdu_gets);
         printf("Now %d:::rlc_in is %d.\n",rnti,rlc_test[rnti].n_unread());
 		
-		ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
+		//ue_test.UE[rnti].pdu_store(pid_now, payload_back, pdu_sz_test);
+		ue_test.UE[rnti].pdu_in(payload_back, pdu_sz_test);
 		// printf("Now this pdu belongs to HARQ NO.%d\n",pid_now);
          
 		// //begin{5.28添加}
@@ -136,7 +141,9 @@ void *lte_send_udp(void *ptr)
 		//    printf("Now PID NO.%d:the retransmission size is %d bytes.\n",pid_now,len);
 		//    printf("Now PID No.%d:queue's No.%d buffer will be sent.\n",pid_now,pdu_queue_test.pdu_q[pid_now].rp_is()+1);
 		// }
-
+		printf("RNTI:%d:::busy_num is %d.\n",rnti,ue_test.UE[rnti].busy_num);
+        payload_tosend = ue_test.UE[rnti].harq_busy(&pid_now, pdu_sz_test);
+		
 		//FX   发送DCI
 
 		DCI_0.N_pid_now = pid_now;
@@ -146,6 +153,8 @@ void *lte_send_udp(void *ptr)
 		if (sendto(st_a, temp_DCI, sizeof(DCI_0), 0, (struct sockaddr *)&addr_a, sizeof(addr_a)) == -1)
 		{
 			printf("RNTI:%d:::DCI:sendto failed ! error message :%s\n", rnti, strerror(errno));
+			ue_test.UE[rnti].reset(pid_now);
+			continue;
 		}
 		else
 		{
@@ -158,21 +167,23 @@ void *lte_send_udp(void *ptr)
 		//添加一个轮询pid_now,如果当前这个pid_now的ACK正在被rece修改，则去取下一个
 
 		//
-		payload_tosend = ue_test.UE[rnti].trans_control(pid_now, pdu_sz_test);
+		
 		if (payload_tosend == NULL)
 		{
+			ue_test.UE[rnti].reset(pid_now);
 			printf("RNTI:%d::: This TTI no pdu to send!\n", rnti);
-			usleep(200000);
+			usleep(1000);
+
 			continue;
 		}
 		if (sendto(st, payload_tosend, pdu_sz_test, 0, (struct sockaddr *)&addr,
 				   sizeof(addr)) == -1)
 		{
 			printf("RNTI:%d::: sendto failed ! error message :%s\n", rnti, strerror(errno));
-			break;
+			ue_test.UE[rnti].reset(pid_now);
 		}
 
-		usleep(200000);
+		usleep(1000);
 		//sleep(1);
 		//FX：end{发送udp}
 		/**********************************/
@@ -187,11 +198,11 @@ void *lte_send_udp(void *ptr)
 		// sleep(1);
 
 		//FX:5.28添加
-		pid_now = pid_now + 1; //循环发送8个进程
-		if (pid_now == 3)
-		{
-			pid_now = 0;
-		}
+		// pid_now = pid_now + 1; //循环发送8个进程
+		// if (pid_now == 3)
+		// {
+		// 	pid_now = 0;
+		// }
 		//5.28添加
 		
 	}

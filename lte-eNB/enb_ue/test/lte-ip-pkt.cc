@@ -10,7 +10,7 @@ using namespace srsue;
 extern rlc_um rlc_test[];
 extern rlc_um rlc3;
 extern int tun_fd;
-extern RLC_interface_FX rlc_inter;
+
 /**************************************************************************
 * lte_send_ip_3:从tun中读数据并压入队列
 **************************************************************************/
@@ -35,6 +35,7 @@ void *lte_send_ip_3(void *ptr)
 	//uint8_t ipClient1[4]={192,168,2,1};
 	//uint8_t ipClient2[4]={192,168,2,2};
 	//uint8_t ipClient3[4]={192,168,2,3};
+	int i=0;
 
 	while (1)
 	{
@@ -60,16 +61,21 @@ void *lte_send_ip_3(void *ptr)
 		//if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==1)){
         //for(int i=0;i<1;++i)
 		//{
-		rlc_test[0].write_sdu(&sdu_bufs[k]);
+		rlc_test[i].write_sdu(&sdu_bufs[k]);
 
 		printf("IP-PKT-:::Now %d rlc_in is %d.\n",i,rlc_test[i].n_unread());
-		//printf("kkk!!!\n");
-		}
+		//}
 
 		//printf("CYCLE END!\n");
 		//}//else if((buffer[k][dst_ip_start]==192) && (buffer[k][dst_ip_start+1]==168) && (buffer[k][dst_ip_start+2]==2) && (buffer[k][dst_ip_start+3]==2))
 
 		//usleep(1000); //linux下 \sleep(),里面变量单位是秒
 		k++;
+
+		i++;
+		if(i>3)
+		{
+			i=0;
+		}
 	}
 }
