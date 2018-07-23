@@ -115,34 +115,39 @@ public:
     qbuff_flag = pdu_queue_test.pdu_q[pid_now].send(payload_back, pdu_sz_test); //把payload)back存入qbuff
     if (qbuff_flag)
     {
-      printf("RNTI:%d:::Succeed in sending PDU to queue's buffer!\n", rnti);
+      printf("RNTI:%d:::Succeed in sending PDU to queue's buffer!(PID:%d,rp is %d,wp is %d)\n", rnti,pid_now,pdu_queue_test.pdu_q[pid_now].rp_is(),pdu_queue_test.pdu_q[pid_now].wp_is());
     }
     else
     {
-      printf("RNTI:%d:::Fail in sending PDU to queue's buffer!\n", rnti);
+      printf("RNTI:%d:::Fail in sending PDU to queue's buffer!(PID:%d,rp is %d,wp is %d)\n", rnti,pid_now,pdu_queue_test.pdu_q[pid_now].rp_is(),pdu_queue_test.pdu_q[pid_now].wp_is());
     }
   }
 
   bool pdu_in(uint8_t *payload_back, uint32_t pdu_sz_test) // 将pdu存入为空闲状态的HARQ进程的队列，但只查找一次
   {
     pthread_mutex_lock(&busy_LOCK);
+    bool suc = false,flag = false;
     static uint32_t pid_not_busy = 0;
     if (busy_num < HARQ_NUM) //有空闲的就存入空闲状态的
     {
       while (busy_index[pid_not_busy])
       {
         pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
+        flag =true;
       }
     }
     else //无空闲的随便存
     {
       pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
     }
-    pthread_mutex_unlock(&busy_LOCK);
     if (pdu_store(pid_not_busy, payload_back, pdu_sz_test))
-      return true;
+      suc = true;
     else
-      return false;
+      suc = false;
+    if(flag)
+       pid_not_busy = 0;
+    pthread_mutex_unlock(&busy_LOCK);
+    return suc;
   }
   void reset(uint32_t pid)
   {
@@ -182,6 +187,7 @@ public:
     //   printf("RNTI %d::: No PDU in queue!\n",rnti);
     //   return NULL;
     // }
+    printf("wp is %d\n",pdu_queue_test.pdu_q[pid_now].wp_is());
     if (ACK_temp)
     {
       //payload_tosend = payload_back;
@@ -229,20 +235,22 @@ public:
   uint8_t *harq_busy(uint32_t *pid, uint32_t len) //用于物理层发送，发送一个不出于busy状态的harq进程的pdu
   {
     pthread_mutex_lock(&busy_LOCK);
+    uint8_t *pay_load=NULL;
     while (busy_num >= HARQ_NUM)
     {
       pthread_cond_wait(&busy_signal, &busy_LOCK);
     }
     uint32_t pid_not_busy = 0;
-    while (busy_index[pid_not_busy])
+    while (busy_index[pid_not_busy]||pdu_queue_test.pdu_q[pid_not_busy].isempty())    //寻找一个即不处于繁忙状态，也非空的harq进程号
     {
       pid_not_busy = (pid_not_busy + 1) % HARQ_NUM;
     }
     busy_index[pid_not_busy] = true;
     busy_num++;
     *pid = pid_not_busy;
+    pay_load=trans_control(pid_not_busy,len);
     pthread_mutex_unlock(&busy_LOCK);
-    return trans_control(pid_not_busy, len);
+    return pay_load;
   }
 };
 

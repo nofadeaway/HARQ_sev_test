@@ -94,7 +94,7 @@ void *lte_send_udp(void *ptr)
 	    //uint8_t *payload_back = new uint8_t[SEND_SIZE];
         if(rlc_test[rnti].n_unread()<=0)
 		{
-			usleep(1000);
+			usleep(5000);
 			continue;
 		}
 		memset(payload_test,0,10240*sizeof(uint8_t));
@@ -172,7 +172,7 @@ void *lte_send_udp(void *ptr)
 		{
 			ue_test.UE[rnti].reset(pid_now);
 			printf("RNTI:%d::: This TTI no pdu to send!\n", rnti);
-			usleep(1000);
+			usleep(5000);
 
 			continue;
 		}
@@ -183,7 +183,7 @@ void *lte_send_udp(void *ptr)
 			ue_test.UE[rnti].reset(pid_now);
 		}
 
-		usleep(1000);
+		usleep(5000);
 		//sleep(1);
 		//FX：end{发送udp}
 		/**********************************/

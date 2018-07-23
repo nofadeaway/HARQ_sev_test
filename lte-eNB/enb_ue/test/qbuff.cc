@@ -55,6 +55,7 @@ bool qbuff::init(uint32_t nof_messages_, uint32_t max_msg_size_)  //nof_messages
 {
   nof_messages = nof_messages_; 
   max_msg_size = max_msg_size_; 
+  unread = 0;
   
   buffer  = (uint8_t*) srslte_vec_malloc(nof_messages*max_msg_size);   //从申请的空间来看，buffer是真正的存储空间，packets是buff的标识
   packets = (pkt_t*)   srslte_vec_malloc(nof_messages*sizeof(pkt_t));     //pkt_t为一个定义在qbuff中的结构体，成员为是否有效，长度，指针
@@ -62,6 +63,7 @@ bool qbuff::init(uint32_t nof_messages_, uint32_t max_msg_size_)  //nof_messages
     bzero(buffer, nof_messages*max_msg_size);   //bzero 将字节字符串前n个字节置为0
     bzero(packets, nof_messages*sizeof(pkt_t));
     flush();
+    printf("qbuff init!\n");
     return true; 
   } else {
     return false; 
@@ -95,6 +97,7 @@ void* qbuff::request()
   if (!isfull()) {
     return packets[wp].ptr; 
   } else {
+    printf("Queue full!\n");
     return NULL; 
   }
 }
@@ -103,7 +106,8 @@ bool qbuff::push(uint32_t len)
 {
   packets[wp].len = len; 
   packets[wp].valid = true; 
-  wp += (wp+1 >= nof_messages)?(1-nof_messages):1;  //循环了
+  //wp += (wp+1 >= nof_messages)?(1-nof_messages):1;  //循环了,wp是下一个空位置的下标
+  wp = (wp+1)%nof_messages;
   return true; 
 }
 
@@ -150,7 +154,8 @@ void qbuff::release()
 {
   packets[rp].valid = false; 
   packets[rp].len = 0; 
-  rp += (rp+1 >= nof_messages)?(1-nof_messages):1; 
+  //rp += (rp+1 >= nof_messages)?(1-nof_messages):1; 
+  rp = (rp+1)%nof_messages;
 }
 
 bool qbuff::send(void* buffer, uint32_t msg_size)   //这个是真正的将数据写入qbuff存储的函数

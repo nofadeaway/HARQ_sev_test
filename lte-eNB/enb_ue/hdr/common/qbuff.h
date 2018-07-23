@@ -76,6 +76,7 @@ namespace srslte {
     //FX
     uint32_t rp_is();
     uint32_t wp_is();
+    uint32_t unread;
     //FX
 
   private:
